@@ -27,7 +27,7 @@ pip install jupyterlab tiktoken
 
 ## 1. Text Cleaning
 
-줄바꿈과 연속된 공백을 **하나의 공백**으로 치환하여, 모델이 불필요한 서식 문자를 학습하지 않도록 합니다.
+줄바꿈과 연속된 공백을 **하나의 공백**으로 치환하여, 모델이 불필요한 서식 문자를 학습하지 않도록 하여 토큰 낭비를 최소화합니다.
 
 ```python
 import re
@@ -97,10 +97,9 @@ for t in tokens:
 
 ## 3. Observations
 
-- **공백이 토큰에 포함됩니다.** `' is'`, `' nothing'`처럼 단어 앞 공백이 같은 토큰으로 묶입니다.
-- **서브워드 분할.** 희소한 단어 `dearer`는 `' de'` + `'arer'`로 쪼개집니다.
-- **압축률.** 위 문장은 70글자가 16토큰으로, 토큰 하나당 약 4.4글자입니다.
-- 같은 토큰 ID(`465`, `' his'`)는 위치와 관계없이 항상 동일한 숫자로 변환됩니다.
+- ' is'`, `' nothing'`처럼 단어 앞 공백이 같은 토큰으로 묶입니다.
+- **서브워드 분할**: 희소한 단어 `dearer`는 `' de'` + `'arer'`로 쪼개집니다.
+- **압축률**: 위 문장은 70글자가 16토큰으로, 토큰 하나당 약 4.4글자입니다.
 
 ## Dataset Token Count
 
@@ -119,6 +118,22 @@ for name in ["cleaned_The_Odyssey.txt", "cleaned_The_Iliad.txt"]:
 cleaned_The_Odyssey.txt 696052 chars -> 171380 tokens
 cleaned_The_Iliad.txt 827148 chars -> 202615 tokens
 ```
+
+### TODO 전처리 전후의 토큰 수를 비교하고, API 입력 비용에 미치는 영향을 분석할 예정입니다.
+- [ ] 원본 및 전처리 텍스트의 토큰 수 측정 (GPT-2 tokenizer)
+- [ ] 토큰 감소량 및 감소율 계산
+- [ ] 주요 LLM의 표준 API 요금 기준 예상 비용 비교
+
+| 항목 | 전처리 전 | 전처리 후 | 감소량 |
+|---|---:|---:|---:|
+| The Odyssey | TODO | TODO | TODO |
+| The Iliad | TODO | TODO | TODO |
+| **Total** | **TODO** | **TODO** | **TODO** |
+
+감소율 = (전처리 전 - 전처리 후) / 전처리 전 × 100
+
+> API 비용은 모델별 입력 요금과 토큰 수를 기준으로 추정하며, 출력 비용은 제외합니다.
+> 실제 토큰 수는 모델별 토크나이저에 따라 달라질 수 있습니다.
 
 ## 데이터 출처
 
