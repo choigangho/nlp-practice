@@ -11,9 +11,11 @@ LLM을 밑바닥부터 만들기 위한 첫 단계로, **텍스트 전처리**�
 | 2. Tokenization | GPT-2 BPE 토크나이저로 텍스트를 토큰 ID로 변환 |
 | 3. Analysis | 글자 수 대비 토큰 수를 측정해 데이터 규모 파악 |
 
-사용한 텍스트: *The Odyssey*, *The Iliad* (영문)
-<img width="500" height="700" alt="image" src="https://github.com/user-attachments/assets/691346b7-65f7-4ca9-9a7c-26ffddc29023" />
-<img width="200" height="266" alt="image" src="https://github.com/user-attachments/assets/a22b8a6b-d5a3-4fe8-bed9-5cd898517d0c" />
+**사용한 텍스트:** *The Odyssey*, *The Iliad* (영문)
+
+| *The Odyssey* | *The Iliad* |
+| :---: | :---: |
+| <img height="240" alt="The Odyssey" src="https://github.com/user-attachments/assets/691346b7-65f7-4ca9-9a7c-26ffddc29023" /> | <img height="240" alt="The Iliad" src="https://github.com/user-attachments/assets/a22b8a6b-d5a3-4fe8-bed9-5cd898517d0c" /> |
 
 
 ## Environment
