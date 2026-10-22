@@ -1,10 +1,8 @@
 # 📖 LLM From Scratch — Data Preparation
-
 LLM을 밑바닥부터 만들기 위한 첫 단계로, **텍스트 전처리**와 **토크나이징**을 구현하고 분석한 기록입니다.
 
 
 ## Overview
-
 | 단계 | 내용 |
 |---|---|
 | 1. Text Cleaning | 줄바꿈·연속 공백을 정리하여 학습용 텍스트 생성 |
@@ -19,7 +17,6 @@ LLM을 밑바닥부터 만들기 위한 첫 단계로, **텍스트 전처리**�
 
 
 ## Environment
-
 - OS: Windows 11
 - Python 3.11 (conda 가상환경 `llm`)
 - PyTorch (CUDA UMD Version: 13.3), tiktoken, JupyterLab
@@ -33,7 +30,6 @@ pip install jupyterlab tiktoken
 
 
 ## 1. Text Cleaning
-
 줄바꿈과 연속된 공백을 **하나의 공백**으로 치환하여, 모델이 불필요한 서식 문자를 학습하지 않도록 하여 토큰 낭비를 최소화합니다!
 
 ```python
@@ -56,8 +52,7 @@ for filename in filenames_list:
     clean_text(filename)
 ```
 
-**Output**
-
+**Output*
 ```text
 cleaned_The_Odyssey.txt 696052 characters
 cleaned_The_Iliad.txt 827148 characters
@@ -65,7 +60,6 @@ cleaned_The_Iliad.txt 827148 characters
 
 
 ## 2. Tokenization
-
 OpenAI GPT-2가 사용하는 **BPE(Byte Pair Encoding)** 토크나이저를 사용했습니다.
 
 ```python
@@ -82,7 +76,6 @@ for t in tokens:
 ```
 
 **Output**
-
 ```text
 글자 수: 70 | 토큰 수: 16
 1858	 -> 'There'
@@ -105,16 +98,14 @@ for t in tokens:
 
 > **Observations**
 > ' is'`, `' nothing'`처럼 단어 앞 공백이 같은 토큰으로 묶입니다.
-> **서브워드 분할**: 희소한 단어 `dearer`는 `' de'` + `'arer'`로 쪼개집니다.
-> **압축률**: 위 문장은 70글자가 16토큰으로, 토큰 하나당 약 4.4글자입니다.
+> * 서브워드 분할: 희소한 단어 `dearer`는 `' de'` + `'arer'`로 쪼개집니다.
+> * 압축률: 위 문장은 70글자가 16토큰으로, 토큰 하나당 약 4.4글자입니다.
 
 
 ## Dataset Token Count & Preprocessing Impact
-
 그렇다면 더욱 실용적인 관점에서 원본 텍스트와 전처리(Cleaning) 후 텍스트의 글자 수 및 토큰 수를 측정하여 전처리 효율과 API 입력 비용 절감 효과를 분석해보겠습니다. *(토큰 수는 GPT-2 토크나이저 기준)*
 
 ### 1. 토큰 수 측정
-
 ```python
 files = [
     "The_Odyssey.txt", "cleaned_The_Odyssey.txt",
@@ -137,7 +128,6 @@ cleaned_The_Iliad.txt     | 827,148 chars -> 202,615 tokens
 ```
 
 ### 2. 전처리 전후 비교 분석
-
 전처리를 통해 불필요한 공백, 특수문자, 메타데이터 등을 제거한 결과, 전체 토큰 수가 **약 20.28% 감소**했습니다.
 
 | 데이터셋 | 전처리 전 (Tokens) | 전처리 후 (Tokens) | 감소량 (Tokens) | 감소율 (%) |
@@ -155,6 +145,5 @@ cleaned_The_Iliad.txt     | 827,148 chars -> 202,615 tokens
 
 
 ## 데이터 출처
-
 - *The Odyssey* - gutenberg
 - *The Iliad* - gutenberg
