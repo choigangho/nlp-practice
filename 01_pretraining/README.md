@@ -11,6 +11,7 @@ LLM 사전학습(Pre-training)의 첫 단계로 원시 텍스트 전처리와 BP
 | **1. Text Cleaning** | 줄바꿈·연속 공백을 단일 공백으로 치환하여 학습용 코퍼스 정제 | `data/cleaned_*.txt` |
 | **2. Tokenization** | GPT-2 BPE 토크나이저를 통한 서브워드 분할 및 공백 병합 확인 | [`pretraining.ipynb`](./pretraining.ipynb) |
 | **3. Impact Analysis** | 전처리 전후의 글자 수 대비 토큰 수 절감 메커니즘 규명 | 본 문서 3절 |
+| **4. DataLoader** | 슬라이딩 윈도우 기반의 자기회귀(Next-Token Prediction) 데이터셋 구축 | [`pretraining.ipynb`](./pretraining.ipynb) |
 
 **사용 코퍼스:** *The Odyssey*, *The Iliad* (영문 원서, Project Gutenberg)
 
@@ -135,7 +136,9 @@ cleaned_The_Iliad.txt     | 827,148 chars -> 202,615 tokens
 | **The Iliad** | 908,237 / 282,913 | 827,148 / 202,615 | 81,089 / 80,298 | 8.93% / 28.38% |
 | **Total** | **1,606,354 / 469,143** | **1,523,200 / 373,995** | **83,154 / 95,148** | **5.18% / 20.28%** |
 
-* $\text{감소율(\%)} = \frac{\text{전처리 전} - \text{전처리 후}}{\text{전처리 전}} \times 100$
+```math
+\text{감소율}\,(\%) = \frac{\text{전처리 전} - \text{전처리 후}}{\text{전처리 전}} \times 100
+```
 
 #### 💡 왜 글자 수 감소율(5.18%)보다 토큰 감소율(20.28%)이 4배 가까이 높을까?
 GPT-2 BPE 토크나이저는 일반 공백(` `)은 뒷단어와 묶어 하나의 토큰으로 병합하지만, **줄바꿈 문자(`\n`)는 뒷단어와 병합하지 않고 독립된 토큰(Token ID `198`)으로 분리**하기 때문입니다.
@@ -150,3 +153,70 @@ GPT-2 BPE 토크나이저는 일반 공백(` `)은 뒷단어와 묶어 하나의
   * 토큰화 결과: `['own', ' country']` $\rightarrow$ **2 토큰** (공백이 `country` 앞에 병합됨)
 
 즉, 전자책 서식을 위해 강제 개행된 수많은 단일 줄바꿈(`\n`)이 공백(` `)으로 바뀌면서 **글자 수는 그대로 유지되더라도 토큰 수는 1개씩 직접 줄어드는 효과**가 발생하여 약 9만 5천 개의 불필요한 토큰이 절감되었습니다. 이는 동일한 Context Length 내에 더 많은 실질적 문맥 정보를 담을 수 있음을 의미합니다.
+
+---
+
+## 4. Dataset & DataLoader (Sliding Window)
+정제된 텍스트 코퍼스를 바탕으로, LLM의 자기회귀적 사전학습(Autoregressive Pre-training)을 위한 입력(`x`)과 정답(`y`) 텐서 쌍을 구축하고 미니배치 단위로 로드합니다.
+
+### 4.1 Custom Dataset & DataLoader 구현
+```python
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+class MyDataset(Dataset):
+    def __init__(self, txt, max_length, stride):
+        self.input_ids = []
+        self.target_ids = []
+
+        token_ids = tokenizer.encode(txt)
+        # print(token_ids) # 토큰화된 cleaned_The_Odyssey.txt 확인
+        print("number of tokens in txt:", len(token_ids))
+        
+        # Sliding Window를 통한 학습 샘플 생성
+        for i in range(0, len(token_ids) - max_length, stride): 
+            input_chunk = token_ids[i:i + max_length]
+            target_chunk = token_ids[i + 1: i + max_length + 1]  # 입력 대비 +1 토큰 시프트
+            self.input_ids.append(torch.tensor(input_chunk))
+            self.target_ids.append(torch.tensor(target_chunk))
+
+    def __len__(self):
+        return len(self.input_ids)
+
+    def __getitem__(self, idx):
+        return self.input_ids[idx], self.target_ids[idx]
+
+# BOM(\ufeff) 자동 제거를 위해 utf-8-sig 인코딩 사용
+with open("data/cleaned_The_Odyssey.txt", 'r', encoding='utf-8-sig') as file:
+    txt = file.read()
+
+dataset = MyDataset(txt, max_length=32, stride=4)
+train_loader = DataLoader(dataset, batch_size=128, shuffle=True, drop_last=True)
+```
+
+**Output**
+```text
+number of tokens in txt: 171380
+```
+
+### 4.2 배치 추출 및 Shift(+1) 검증
+DataLoader에서 첫 번째 미니배치를 추출하고, 첫 번째 샘플(x[0], y[0])을 디코딩하여 입력과 타겟이 의도대로 1토큰씩 시프트되었는지 검증합니다.
+
+```python
+dataiter = iter(train_loader)
+x, y = next(dataiter)  # x.shape: (128, 32), y.shape: (128, 32)
+
+print(tokenizer.decode(x[0].tolist()))
+print(tokenizer.decode(y[0].tolist()))
+```
+
+**Output** (※ shuffle=True 적용으로 실행 시마다 무작위 구절이 출력되며, 타겟은 입력보다 +1 토큰 밀린 형태를 띰)
+```text
+and tell me truly, for I would fain know, who art thou among men, and from whence? Where is thy city, and where are thy parents?
+ tell me truly, for I would fain know, who art thou among men, and from whence? Where is thy city, and where are thy parents? On
+```
+
+**Observations & Key Points**
+> * **Next-Token Prediction (+1 Shift):** target_chunk의 인덱스를 input_chunk보다 정확히 +1칸 이동(i+1 : i+max_length+1)시켜 구성했습니다. 이를 통해 길이 32짜리 단일 시퀀스 쌍 하나에서 총 32번의 다음 토큰 예측 문제를 동시에 학습합니다.
+> * **Sliding Window (stride=4):** 윈도우 크기(max_length=32)보다 작은 보폭(stride=4)으로 겹치게 슬라이싱하여, 문맥이 경계에서 단절되는 것을 방지하고 총 학습 샘플 수를 약 8배($\approx 42,837$개)로 증강(Augmentation)했습니다.
+> * **DataLoader 설계 (shuffle=True, drop_last=True):** 좁은 stride로 인해 인접한 샘플 간에 28개의 토큰이 중복되므로, 배치 내 데이터 편향(Bias)을 막기 위해 shuffle=True를 필수로 적용했습니다. 또한 마지막 자투리 배치로 인한 텐서 차원 불일치 및 그래디언트 불안정을 방지하기 위해 drop_last=True로 설정하여 모든 배치의 Shape를 (128, 32)로 고정했습니다.
