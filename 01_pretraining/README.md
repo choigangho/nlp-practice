@@ -210,7 +210,7 @@ print(tokenizer.decode(x[0].tolist()))
 print(tokenizer.decode(y[0].tolist()))
 ```
 
-**Output** (※ shuffle=True 적용으로 실행 시마다 무작위 구절이 출력되며, 타겟은 입력보다 +1 토큰 밀린 형태를 띰)
+**Output** (※ shuffle=True 적용으로 실행 시마다 무작위 구절이 출력되며, 타겟 y는 입력 x보다 +1 토큰 밀린 형태를 띰)
 ```text
 and tell me truly, for I would fain know, who art thou among men, and from whence? Where is thy city, and where are thy parents?
  tell me truly, for I would fain know, who art thou among men, and from whence? Where is thy city, and where are thy parents? On
@@ -218,5 +218,4 @@ and tell me truly, for I would fain know, who art thou among men, and from whenc
 
 **Observations & Key Points**
 > * **Next-Token Prediction (+1 Shift):** target_chunk의 인덱스를 input_chunk보다 정확히 +1칸 이동(i+1 : i+max_length+1)시켜 구성했습니다. 이를 통해 길이 32짜리 단일 시퀀스 쌍 하나에서 총 32번의 다음 토큰 예측 문제를 동시에 학습합니다.
-> * **Sliding Window (stride=4):** 윈도우 크기(max_length=32)보다 작은 보폭(stride=4)으로 겹치게 슬라이싱하여, 문맥이 경계에서 단절되는 것을 방지하고 총 학습 샘플 수를 약 8배($\approx 42,837$개)로 증강(Augmentation)했습니다.
-> * **DataLoader 설계 (shuffle=True, drop_last=True):** 좁은 stride로 인해 인접한 샘플 간에 28개의 토큰이 중복되므로, 배치 내 데이터 편향(Bias)을 막기 위해 shuffle=True를 필수로 적용했습니다. 또한 마지막 자투리 배치로 인한 텐서 차원 불일치 및 그래디언트 불안정을 방지하기 위해 drop_last=True로 설정하여 모든 배치의 Shape를 (128, 32)로 고정했습니다.
+> * **자동 라벨링을 통한 지도학습(Supervised Learning) 구조화:** 별도의 정답 라벨이 없는 원시 텍스트(Unlabeled Text)에서 바로 다음 위치의 토큰을 정답(Target Label, y)으로 삼아 입력(x)과 짝지어 주었습니다. 즉, 텍스트 데이터 자체에서 정답지를 자동으로 생성함으로써 LLM 사전학습을 전형적인 **지도학습(Supervised Learning / Self-Supervised Learning)** 문제로 변환하여 학습을 수행합니다.
